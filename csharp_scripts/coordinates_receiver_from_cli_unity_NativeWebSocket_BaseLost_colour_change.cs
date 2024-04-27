@@ -29,7 +29,8 @@ public class PositionReceiver : MonoBehaviour
 
     private async void Start()
     {
-        websocket = new WebSocket("ws://localhost:8080/ws");
+        // websocket = new WebSocket("ws://localhost:8080/ws");
+        websocket = new WebSocket("ws://192.168.1.55:8080/ws");
         boxRenderer = boxObject.GetComponent<Renderer>();
 
         websocket.OnOpen += () =>
