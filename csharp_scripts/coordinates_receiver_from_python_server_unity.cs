@@ -1,3 +1,5 @@
+// Data received by this program are send by `server_socket.py` script.
+
 using UnityEngine;
 using System;
 using System.Net.Sockets;
