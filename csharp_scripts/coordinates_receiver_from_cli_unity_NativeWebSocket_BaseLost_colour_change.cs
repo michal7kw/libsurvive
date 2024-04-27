@@ -29,8 +29,15 @@ public class PositionReceiver : MonoBehaviour
 
     private async void Start()
     {
+        // ####### Local connection #######
         // websocket = new WebSocket("ws://localhost:8080/ws");
-        websocket = new WebSocket("ws://192.168.1.55:8080/ws");
+        
+        // ####### Remote connection #######
+        // ip Huawei portable wifi: 192.168.8.108
+        websocket = new WebSocket("ws://192.168.8.108:8080/ws");
+        // ip Enel wifi: 192.168.1.55
+        // websocket = new WebSocket("ws://192.168.1.55:8080/ws");
+        
         boxRenderer = boxObject.GetComponent<Renderer>();
 
         websocket.OnOpen += () =>
