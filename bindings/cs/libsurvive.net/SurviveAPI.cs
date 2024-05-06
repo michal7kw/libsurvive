@@ -100,12 +100,7 @@ public class SurviveAPI : IDisposable {
 		return SurviveAPIOObject.Create(Cfunctions_api.survive_simple_get_next_updated(actx));
 	}
 
-
-	public SurviveAPIOObject GetBsdId() { survive_get_bsd_idx
-		return SurviveAPIOObject.Create(Cfunctions_api.survive_simple_get_next_updated(actx));
-	}
-
-	public bool IsRunning() { return Cfunctions_api.survive_get_bsd_idx(actx); }
+	public bool IsRunning() { return Cfunctions_api.survive_simple_is_running(actx); }
 
 	public bool WaitForUpdate() { return Cfunctions_api.survive_simple_wait_for_update(actx); }
 }

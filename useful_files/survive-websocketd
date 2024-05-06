@@ -1,7 +1,7 @@
 #!/bin/bash
 
 if [ "$1" == "-m" ]; then
-    `dirname $0`/survive-cli --record-stdout --no-record-imu $@ #--record-cal-imu 
+    `dirname $0`/survive-cli --record-stdout --record-cal-imu --no-record-imu $@
     exit $?
 fi;
 
@@ -9,4 +9,4 @@ ROOT=`git rev-parse --show-toplevel`
 echo -e -n 'Navigate to \e[32mfile://'
 echo -n -e $ROOT
 echo -e '/tools/viz/index.html\033[m '
-websocketd --passenv OPENBLAS_NUM_THREADS --passenv HOME --port 8080 `dirname $0`/survive-cli --record-stdout --report-covariance 10 $@ #--record-cal-imu
+websocketd --passenv OPENBLAS_NUM_THREADS --passenv HOME --port 8080 `dirname $0`/survive-cli --record-stdout --record-cal-imu --report-covariance 30 $@
