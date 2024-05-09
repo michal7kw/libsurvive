@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-
 import tkinter as tk
 from tkinter import ttk
 import subprocess
@@ -9,7 +7,7 @@ class Application(tk.Frame):
         super().__init__(master)
         self.master = master
         self.process = None
-        self.ip_address = tk.StringVar(value="127.0.0.1")
+        self.ip_address = ["127", "0", "0", "1"]
         self.is_fullscreen = True
         self.create_widgets()
 
@@ -17,9 +15,9 @@ class Application(tk.Frame):
         # Configure style
         style = ttk.Style()
         style.configure("TFrame", background="#f0f0f0")
-        style.configure("TButton", font=("Arial", 14), padding=10)
-        style.configure("TLabel", font=("Arial", 12), background="#f0f0f0")
-        style.configure("TEntry", font=("Arial", 12))
+        style.configure("TButton", font=("Arial", 18), padding=20)
+        style.configure("TLabel", font=("Arial", 16), background="#f0f0f0")
+        style.configure("TEntry", font=("Arial", 20))
 
         # Create a frame for the exit button
         self.exit_frame = ttk.Frame(self.master)
@@ -31,13 +29,27 @@ class Application(tk.Frame):
 
         # Create a frame for the IP address label and entry
         self.ip_frame = ttk.Frame(self.master)
-        self.ip_frame.pack(fill="x", padx=20, pady=10)
+        self.ip_frame.pack(fill="x", padx=20, pady=20)
 
         self.ip_label = ttk.Label(self.ip_frame, text="IP Address:")
         self.ip_label.pack(side="left")
 
-        self.ip_entry = ttk.Entry(self.ip_frame, textvariable=self.ip_address)
-        self.ip_entry.pack(side="left", fill="x", expand=True)
+        self.ip_entries = []
+        for i in range(4):
+            ip_entry = ttk.Entry(self.ip_frame, width=3, font=("Arial", 24), justify="center")
+            ip_entry.insert(0, self.ip_address[i])
+            ip_entry.pack(side="left", padx=5)
+            self.ip_entries.append(ip_entry)
+
+            up_button = ttk.Button(self.ip_frame, text="▲", width=2, command=lambda idx=i: self.increment_ip_digit(idx))
+            up_button.pack(side="left")
+
+            down_button = ttk.Button(self.ip_frame, text="▼", width=2, command=lambda idx=i: self.decrement_ip_digit(idx))
+            down_button.pack(side="left")
+
+            if i < 3:
+                separator = ttk.Label(self.ip_frame, text=".")
+                separator.pack(side="left", padx=5)
 
         # Create a frame for the start and stop buttons
         self.button_frame = ttk.Frame(self.master)
@@ -55,7 +67,7 @@ class Application(tk.Frame):
 
     def start_script(self):
         if self.process is None:
-            ip_address = self.ip_address.get()
+            ip_address = ".".join(self.ip_address)
             command = f"websocketd --passenv OPENBLAS_NUM_THREADS --passenv HOME --port 8080 --address {ip_address} /home/michal/Documents/Githubs/libsurvive/bin/survive-cli --record-stdout --no-record-imu --report-covariance 30"
             self.process = subprocess.Popen(command, shell=True)
 
@@ -71,6 +83,20 @@ class Application(tk.Frame):
             self.exit_button.config(text="Exit Fullscreen")
         else:
             self.exit_button.config(text="Enter Fullscreen")
+
+    def increment_ip_digit(self, idx):
+        digit = int(self.ip_address[idx])
+        if digit < 255:
+            self.ip_address[idx] = str(digit + 1)
+            self.ip_entries[idx].delete(0, tk.END)
+            self.ip_entries[idx].insert(0, self.ip_address[idx])
+
+    def decrement_ip_digit(self, idx):
+        digit = int(self.ip_address[idx])
+        if digit > 0:
+            self.ip_address[idx] = str(digit - 1)
+            self.ip_entries[idx].delete(0, tk.END)
+            self.ip_entries[idx].insert(0, self.ip_address[idx])
 
 root = tk.Tk()
 root.title("Script Controller")
