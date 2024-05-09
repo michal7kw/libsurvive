@@ -1,14 +1,18 @@
+#!/usr/bin/env python3
+
 import tkinter as tk
 from tkinter import ttk
 from tkinter.scrolledtext import ScrolledText
 import subprocess
+import threading
 
 class Application(tk.Frame):
     def __init__(self, master=None):
         super().__init__(master)
         self.master = master
         self.process = None
-        self.ip_address = ["127", "0", "0", "1"]
+        self.ip_address = ["192", "168", "8", "112"]
+        self.port = ["8", "0", "8", "0"]
         self.is_fullscreen = True
         self.create_widgets()
 
@@ -52,6 +56,26 @@ class Application(tk.Frame):
                 separator = ttk.Label(self.ip_frame, text=".")
                 separator.pack(side="left", padx=5)
 
+        # Create a frame for the port label and entry
+        self.port_frame = ttk.Frame(self.master)
+        self.port_frame.pack(fill="x", padx=20, pady=10)
+
+        self.port_label = ttk.Label(self.port_frame, text="Port:")
+        self.port_label.pack(side="left")
+
+        self.port_entries = []
+        for i in range(4):
+            port_entry = ttk.Entry(self.port_frame, width=3, font=("Arial", 24), justify="center")
+            port_entry.insert(0, self.port[i])
+            port_entry.pack(side="left", padx=5)
+            self.port_entries.append(port_entry)
+
+            up_button = ttk.Button(self.port_frame, text="▲", width=2, command=lambda idx=i: self.increment_port_digit(idx))
+            up_button.pack(side="left")
+
+            down_button = ttk.Button(self.port_frame, text="▼", width=2, command=lambda idx=i: self.decrement_port_digit(idx))
+            down_button.pack(side="left")
+
         # Create a frame for the start and stop buttons
         self.button_frame = ttk.Frame(self.master)
         self.button_frame.pack(fill="both", expand=True)
@@ -76,22 +100,26 @@ class Application(tk.Frame):
     def start_script(self):
         if self.process is None:
             ip_address = ".".join(self.ip_address)
-            command = f"websocketd --passenv OPENBLAS_NUM_THREADS --passenv HOME --port 8080 --address {ip_address} /home/michal/Documents/libsurvive/bin/survive-cli --record-stdout --no-record-imu --report-covariance 30"
+            port = "".join(self.port)
+            command = f"websocketd --passenv OPENBLAS_NUM_THREADS --passenv HOME --port {port} --address {ip_address} /home/michal/Documents/libsurvive/bin/survive-cli --record-stdout --no-record-imu --report-covariance 30"
             self.process = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True)
-            self.monitor_process()
+            threading.Thread(target=self.monitor_process).start()
 
     def monitor_process(self):
-        if self.process:
+        while self.process:
             output = self.process.stdout.readline().strip()
             if output:
                 self.terminal_display.insert(tk.END, output + "\n")
                 self.terminal_display.see(tk.END)
-            self.master.after(100, self.monitor_process)
 
     def stop_script(self):
         if self.process is not None:
             self.process.kill()
             self.process = None
+            
+            port = "".join(self.port)
+            command = f"lsof -t -i:{port} | xargs kill -9"
+            subprocess.run(command, shell=True)
 
     def toggle_fullscreen(self):
         self.is_fullscreen = not self.is_fullscreen
@@ -114,6 +142,20 @@ class Application(tk.Frame):
             self.ip_address[idx] = str(digit - 1)
             self.ip_entries[idx].delete(0, tk.END)
             self.ip_entries[idx].insert(0, self.ip_address[idx])
+
+    def increment_port_digit(self, idx):
+        digit = int(self.port[idx])
+        if digit < 9:
+            self.port[idx] = str(digit + 1)
+            self.port_entries[idx].delete(0, tk.END)
+            self.port_entries[idx].insert(0, self.port[idx])
+
+    def decrement_port_digit(self, idx):
+        digit = int(self.port[idx])
+        if digit > 0:
+            self.port[idx] = str(digit - 1)
+            self.port_entries[idx].delete(0, tk.END)
+            self.port_entries[idx].insert(0, self.port[idx])
 
 root = tk.Tk()
 root.title("Script Controller")
