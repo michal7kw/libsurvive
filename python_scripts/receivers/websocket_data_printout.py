@@ -8,7 +8,7 @@ async def process_data(websocket):
         print(message)
 
 async def main():
-    async with websockets.connect('ws://localhost:8080/ws') as websocket:
+    async with websockets.connect('ws://192.168.8.112:8080/ws') as websocket:
         await process_data(websocket)
 
 asyncio.run(main())
