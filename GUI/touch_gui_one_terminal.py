@@ -5,13 +5,16 @@ from tkinter import ttk
 from tkinter.scrolledtext import ScrolledText
 import subprocess
 import threading
+import signal
 
 class Application(tk.Frame):
     def __init__(self, master=None):
         super().__init__(master)
         self.master = master
         self.process = None
-        self.ip_address = ["192", "168", "8", "112"]
+        self.calibrate_process = None
+        # self.ip_address = ["192", "168", "8", "112"]
+        self.ip_address = ["127", "0", "0", "1"]
         self.port = ["8", "0", "8", "0"]
         self.is_fullscreen = True
         self.create_widgets()
@@ -38,6 +41,21 @@ class Application(tk.Frame):
 
         self.ip_label = ttk.Label(self.ip_frame, text="IP Address:")
         self.ip_label.pack(side="left")
+
+        # Create a frame for the calibrate and stop calibrate buttons
+        self.calibrate_frame = ttk.Frame(self.master)
+        self.calibrate_frame.pack(fill="x", padx=20, pady=10)
+
+        self.calibrate_button = ttk.Button(self.calibrate_frame, text="Calibrate", command=self.calibrate, style="Calibrate.TButton")
+        self.calibrate_button.pack(side="left", fill="x", padx=20, pady=10, expand=True)
+
+        # self.stop_calibrate_button = ttk.Button(self.calibrate_frame, text="Stop Calibrate", command=self.stop_calibrate, style="StopCalibrate.TButton")
+        self.stop_calibrate_button = ttk.Button(self.calibrate_frame, text="Stop Calibrate", command=self.stop_calibrate, style="StopCalibrate.TButton", state='disabled')
+        self.stop_calibrate_button.pack(side="right", fill="x", padx=20, pady=10, expand=True)
+
+        # Configure button styles
+        style.configure("Calibrate.TButton", background="blue", foreground="white", font=("Arial", 18), padding=10)
+        style.configure("StopCalibrate.TButton", background="orange", foreground="white", font=("Arial", 18), padding=10)
 
         self.ip_entries = []
         for i in range(4):
@@ -99,6 +117,7 @@ class Application(tk.Frame):
 
     def start_script(self):
         if self.process is None:
+            # self.release_usb_interface()
             ip_address = ".".join(self.ip_address)
             port = "".join(self.port)
             command = f"websocketd --passenv OPENBLAS_NUM_THREADS --passenv HOME --port {port} --address {ip_address} /home/michal/Documents/libsurvive/bin/survive-cli --record-stdout --no-record-imu --report-covariance 30"
@@ -156,6 +175,40 @@ class Application(tk.Frame):
             self.port[idx] = str(digit - 1)
             self.port_entries[idx].delete(0, tk.END)
             self.port_entries[idx].insert(0, self.port[idx])
+
+    def calibrate(self):
+        if self.calibrate_process is None:            
+            self.terminal_display.configure(state='normal')
+            self.terminal_display.delete('1.0', tk.END)
+            # self.terminal_display.configure(state='disabled')
+            
+            command = "/home/michal/Documents/libsurvive/bin/survive-cli --force-calibrate"
+            self.calibrate_process = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, universal_newlines=True)
+            threading.Thread(target=self.monitor_calibrate_process).start()
+            self.calibrate_button.configure(state='disabled')
+            self.stop_calibrate_button.configure(state='normal')
+
+    def stop_calibrate(self):
+        if self.calibrate_process is not None:
+            self.calibrate_process.send_signal(signal.SIGKILL)
+            self.calibrate_process.wait()
+            self.calibrate_process = None
+            self.calibrate_button.configure(state='normal')
+            # self.stop_calibrate_button.configure(state='disabled')
+
+    def monitor_calibrate_process(self):
+        while self.calibrate_process is not None and self.calibrate_process.poll() is None:
+            output = self.calibrate_process.stdout.readline()
+            if output:
+                self.terminal_display.configure(state='normal')
+                self.terminal_display.insert(tk.END, output)
+                self.terminal_display.see(tk.END)
+                # self.terminal_display.configure(state='disabled')
+        
+        if self.calibrate_process is not None:
+            self.calibrate_process = None
+            self.calibrate_button.configure(state='normal')
+            # self.stop_calibrate_button.configure(state='disabled')
 
 root = tk.Tk()
 root.title("Script Controller")
