@@ -12,10 +12,8 @@ public class PositionReceiver : MonoBehaviour
     private const int VELO = 20;
 
     private WebSocket websocket;
-    private bool base0Loss = false;
-    private bool base1Loss = false;
-    private int base0LossBuffer = MAX_LOSS;
-    private int base1LossBuffer = MAX_LOSS;
+    private bool[] baseLoss = new bool[4];
+    private int[] baseLossBuffer = new int[4];
 
     public GameObject boxObject;
     private Renderer boxRenderer;
@@ -29,16 +27,15 @@ public class PositionReceiver : MonoBehaviour
 
     private async void Start()
     {
-        // ####### Local connection #######
-        // websocket = new WebSocket("ws://localhost:8080/ws");
-        
-        // ####### Remote connection #######
-        // ip Huawei portable wifi: 192.168.8.108
         websocket = new WebSocket("ws://192.168.8.108:8080/ws");
-        // ip Enel wifi: 192.168.1.55
-        // websocket = new WebSocket("ws://192.168.1.55:8080/ws");
         
         boxRenderer = boxObject.GetComponent<Renderer>();
+
+        for (int i = 0; i < 4; i++)
+        {
+            baseLoss[i] = false;
+            baseLossBuffer[i] = MAX_LOSS;
+        }
 
         websocket.OnOpen += () =>
         {
@@ -60,16 +57,13 @@ public class PositionReceiver : MonoBehaviour
             var message = System.Text.Encoding.UTF8.GetString(bytes);
             var data = message.Trim().Split();
 
-            Debug.Log($"Base 0 Loss: {base0LossBuffer}");
-            Debug.Log($"Base 0 Loss: {base0LossBuffer}");
-            if (base0Loss)
+            for (int i = 0; i < 4; i++)
             {
-                Debug.Log($"!!!! Base 0 Lost: {base0LossBuffer} !!!!");
-            }
-
-            if (base1Loss)
-            {
-                Debug.Log($"!!!! Base 1 Lost {base1LossBuffer} !!!!");
+                Debug.Log($"Base {i} Loss: {baseLossBuffer[i]}");
+                if (baseLoss[i])
+                {
+                    Debug.Log($"!!!! Base {i} Lost: {baseLossBuffer[i]} !!!!");
+                }
             }
 
             if (data[2] == "POSE")
@@ -105,106 +99,64 @@ public class PositionReceiver : MonoBehaviour
                     boxObject.transform.rotation = averageRotation;
                 }
             }
-            else if (data[2] == "VELOCITY")
-            {
-                // ...
-            }
-            else if (data[2] == "FULL_STATE")
-            {
-                // ...
-            }
-            else if (data[2] == "FULL_COVARIANCE")
-            {
-                // ...
-            }
-            else if (data[2] == "LH_UP")
-            {
-                Debug.Log(string.Join(" ", data));
-            }
-            else if (data[2] == "DISCONNECT")
-            {
-                Debug.Log(string.Join(" ", data));
-            }
             else if (data[1] == "WM0")
             {
                 if (data[2] == "W")
                 {
-                    if (data[3] == "0")
+                    int baseIndex = int.Parse(data[3]);
+                    if (baseIndex >= 0 && baseIndex < 4)
                     {
-                        if (base0Loss)
-                        {
-                            base0LossBuffer = MAX_LOSS;
-                            base0Loss = false;
-                            if (!base1Loss)
-                            {
-                                base1LossBuffer--;
-                            }
-                        }
-                        else
-                        {
-                            if (base0LossBuffer < MAX_LOSS){
-                                base0LossBuffer++;
-                            }
-                            if (!base1Loss)
-                            {
-                                base1LossBuffer--;
-                            }
-                        }
-                    }
-                    else if (data[3] == "1")
-                    {
-                        if (base1Loss)
-                        {
-                            base1LossBuffer = MAX_LOSS;
-                            base1Loss = false;
-                            if (!base0Loss)
-                            {
-                                base0LossBuffer--;
-                            }
-                        }
-                        else
-                        {
-                            if (base1LossBuffer < MAX_LOSS){
-                                base1LossBuffer++;
-                            }
-                            if (!base0Loss)
-                            {
-                                base0LossBuffer--;
-                            }
-                        }
-                    }
-
-                    if (base0LossBuffer < 0)
-                    {
-                        base0Loss = true;
-                    }
-                    if (base1LossBuffer < 0)
-                    {
-                        base1Loss = true;
+                        UpdateBaseLossStatus(baseIndex);
                     }
                 }
             }
-            else
-            {
-                // ...
-            }
 
-            // Change box color based on base station loss
-            if (base0Loss || base1Loss)
-            {
-                boxRenderer.material.color = Color.red;
-            }
-            else
-            {
-                boxRenderer.material.color = Color.white;
-            }
+            UpdateBoxColor();
         };
 
-        // Keep sending messages at every 0.3s
         InvokeRepeating("SendWebSocketMessage", 0.0f, 0.3f);
 
-        // waiting for messages
         await websocket.Connect();
+    }
+
+    private void UpdateBaseLossStatus(int currentBase)
+    {
+        if (baseLoss[currentBase])
+        {
+            baseLossBuffer[currentBase] = MAX_LOSS;
+            baseLoss[currentBase] = false;
+        }
+        else
+        {
+            if (baseLossBuffer[currentBase] < MAX_LOSS)
+            {
+                baseLossBuffer[currentBase]++;
+            }
+        }
+
+        for (int i = 0; i < 4; i++)
+        {
+            if (i != currentBase)
+            {
+                baseLossBuffer[i]--;
+                if (baseLossBuffer[i] < 0)
+                {
+                    baseLoss[i] = true;
+                }
+            }
+        }
+    }
+
+    private void UpdateBoxColor()
+    {
+        if (baseLoss.Any(loss => loss))
+        {
+            boxRenderer.material.color = Color.red;
+        }
+        else
+        {
+            boxRenderer.material.color = Color.white;
+        }
     }
 
     private void SendWebSocketMessage()
